@@ -85,6 +85,49 @@ FLASK_ENV=production
             }
         }
         
+        stage('Stop Old Containers') {
+            steps {
+                script {
+                    // Stop existing containers if running
+                    sh 'docker-compose -p peoplemgmt down || true'
+                }
+            }
+        }
+
+        stage('Run Containers') {
+            steps {
+                script {
+                    // Run containers in detached mode
+                    sh 'docker-compose -p peoplemgmt -f docker-compose.yml up -d'
+                }
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                script {
+                    // Wait for services to start
+                    sh 'sleep 30'
+                    
+                    // Check if application is running
+                    sh '''
+                        echo "Checking if application is running..."
+                        curl -f http://localhost || echo "Application not responding yet, but continuing..."
+                        docker-compose -p peoplemgmt ps
+                    '''
+                }
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                script {
+                    // Clean up unused images to save space
+                    sh 'docker image prune -f || true'
+                }
+            }
+        }
+        
         stage('Test Docker Image') {
             steps {
                 echo 'Testing Docker image...'
@@ -111,30 +154,6 @@ FLASK_ENV=production
             }
         }
 
-        stage('Run Containers') {
-            steps {
-                script {
-                    // Stop existing containers if running
-                    sh 'docker-compose -p peoplemgmt down || true'
-                    
-                    // Run containers in detached mode
-                    sh 'docker-compose -p peoplemgmt -f docker-compose.yml up -d'
-                }
-            }
-        }
-
-        stage('Health Check') {
-            steps {
-                script {
-                    // Wait for services to start
-                    sh 'sleep 30'
-                    
-                    // Check if application is running
-                    sh 'curl -f http://localhost || echo "Health check failed but continuing..."'
-                }
-            }
-        }
-        
         stage('Push to Docker Hub') {
             when {
                 anyOf {
@@ -299,17 +318,25 @@ echo "🎉 Production deployment completed successfully!"
     
     post {
         success {
-            echo 'Build and deployment completed successfully!'
-            echo 'Application is running at http://your-server-ip'
+            script {
+                echo 'Build and deployment completed successfully!'
+                echo 'Application should be running at http://your-server-ip'
+                sh 'docker-compose -p peoplemgmt ps'
+            }
         }
         failure {
-            echo 'Build or deployment failed. Please check logs.'
-            // Show container logs for debugging
-            sh 'docker-compose -p peoplemgmt logs || true'
+            script {
+                echo 'Build or deployment failed. Please check logs.'
+                // Show container logs for debugging
+                sh 'docker-compose -p peoplemgmt logs || true'
+            }
         }
         always {
-            // Clean up unused images to save space
-            sh 'docker image prune -f || true'
+            script {
+                echo 'Pipeline completed.'
+                // Show final status
+                sh 'docker ps || true'
+            }
         }
     }
 }
