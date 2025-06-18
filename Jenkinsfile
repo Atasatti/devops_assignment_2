@@ -1,25 +1,6 @@
 pipeline {
     agent any
     
-    environment {
-        // Docker Hub credentials (configure in Jenkins)
-        DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
-        DOCKER_IMAGE_NAME = 'your-dockerhub-username/people-management-app'
-        DOCKER_TAG = "${BUILD_NUMBER}"
-        
-        // AWS EC2 credentials (configure in Jenkins)
-        EC2_CREDENTIALS = credentials('ec2-ssh-key')
-        EC2_HOST = 'your-ec2-public-ip'
-        EC2_USER = 'ubuntu'
-        
-        // Application environment variables
-        MONGO_URI = credentials('mongo-uri')
-        SECRET_KEY = credentials('secret-key')
-        
-        // Deployment directory on EC2
-        DEPLOY_DIR = '/opt/people-management'
-    }
-    
     stages {
         stage('Checkout') {
             steps {
